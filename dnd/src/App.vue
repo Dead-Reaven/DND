@@ -15,18 +15,14 @@ export default {
 				{ "id": 1662, "class_id": 2986, "const": "3", "name": "ЧЄЛІКИ", "hash": "7nPM6JVMW8CP6Pvx", "training_hits": 47, "training_score": 5, "created_at": "2023-11-14T07:11:45.000000Z", "updated_at": "2024-09-23T09:26:35.000000Z", "score": 106, "total_score": 111, "users": [{ "id": 10102, "name": "Кифор Яна Ігорівна", "pivot": { "team_id": 1662, "user_id": 10102, "gist": "captain" } }, { "id": 18427, "name": "Гончарова Тетяна", "pivot": { "team_id": 1662, "user_id": 18427, "gist": null } }, { "id": 18626, "name": "Гонцовська Олена", "pivot": { "team_id": 1662, "user_id": 18626, "gist": null } }, { "id": 17375, "name": "Тичков Максим Васильович", "pivot": { "team_id": 1662, "user_id": 17375, "gist": null } }, { "id": 17376, "name": "Ткачук Яна Василівна", "pivot": { "team_id": 1662, "user_id": 17376, "gist": null } }, { "id": 17377, "name": "Тростянчин Діана Андріївна", "pivot": { "team_id": 1662, "user_id": 17377, "gist": null } }, { "id": 17378, "name": "Турчин Матвій Андрійович", "pivot": { "team_id": 1662, "user_id": 17378, "gist": null } }, { "id": 17381, "name": "Яремко Олег Андрійович", "pivot": { "team_id": 1662, "user_id": 17381, "gist": null } }] }]
 			,
 			games: {
-				"1660": { "replies_count": 0, "training_score": 0, "score": 0, "total_score": 0, "isWin": false },
+				"1660": { "replies_count": 10, "training_score": 10, "score": 20, "total_score": 30, "isWin": true },
 				"1661": { "replies_count": 0, "training_score": 0, "score": 0, "total_score": 0, "isWin": false },
 				"1662": { "replies_count": 0, "training_score": 0, "score": 0, "total_score": 0, "isWin": false }
 			},
 			trainingHits: { "9978": 3 }
 		}
 	},
-	// computed: {
-	// 	getUsers () {
-	// 		return [...this.teamsWithUsers.map((team)=> team.users)]
-	// 	}
-	// },
+
 	methods: {
 		onChangeCaptain(team, user) {
 			// this.axios.post(`teacher/teams/${team.id}/captain/${user.id}`).then(resp => {
@@ -46,28 +42,34 @@ export default {
 		},
 
 		onDrop(event, teamID, index) {
-			const userID = parseInt(event.dataTransfer.getData('userID'))
+			const userID = parseInt(event.dataTransfer.getData('userID'));
 
-			let targetUser
+			let targetUser;
 
-			this.teamsWithUsers = this.teamsWithUsers.map((team) => {
-				return {
-					...team, users:
-						team.users.filter((user) => {
-							if (user.id === userID) {
-								user.pivot.team_id = teamID
-								targetUser = user
-								return false
-							}
-							return true
-						})
-				}
-			})
-			this.teamsWithUsers[index].users.push(targetUser)
+			this.teamsWithUsers = this.teamsWithUsers.map((team, i) => {
+				let newTeam = {
+					...team,
+					users: team.users.filter((user) => {
+						// don`t allow swap capitans!
+						if (user.id === userID && !user.pivot.gist && user.pivot.team_id !== teamID) {
+							user.pivot.team_id = teamID;
+							targetUser = user; // Store the user to add later
+							return false; // Remove the user from the current team
+						}
+						return true; // Keep other users
+					})
+				};
+				// newTeam.users[0].pivot.gist = 'captain';
+				return newTeam
+			});
 
+			// Update the new team's user list
+			if (targetUser)
+				this.teamsWithUsers[index].users.push(targetUser);
 
 			console.log({ teamID, userID });
 		}
+
 
 	},
 }
@@ -78,7 +80,8 @@ export default {
 	<div class="teams-wrap">
 		<div class="teams">
 			<template v-for="(team, index) in teamsWithUsers" :key="team.id">
-				<div v-if="team.users.length" class="team" @dragover.prevent @dragenter.prevent @drop="onDrop($event, team.id, index)">
+				<div v-if="team.users.length" class="team" @dragover.prevent @dragenter.prevent
+					@drop="onDrop($event, team.id, index)">
 					<h3 contenteditable @keydown.enter.prevent="$event.target.blur()"
 						@focusout="($event.target.textContent !== team.name) && onChangeTeamName(team, $event.target.textContent)"
 						spellcheck="false" title="Придумайте унікальну назву для цієї команди">
@@ -112,7 +115,7 @@ export default {
 
 					<div class="participants">
 						<div style="color: var(--primary-text)" v-for="(user, key) in team.users" :key="key"
-							@dragstart="onDragStart($event, user)" draggable="true">
+							@dragstart="onDragStart($event, user)" :draggable="!user.pivot.gist" >
 							<input type="radio" :name="`captain_${team.id}`" class="captain"
 								@change="onChangeCaptain(team, user)" :checked="isCaptain(team, user)"
 								:title="isCaptain(team, user) ? 'Капітан доманди' : 'Назначити капітаном команди'" />

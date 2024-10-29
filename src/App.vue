@@ -25,54 +25,53 @@ export default {
 
 	methods: {
 		onChangeCaptain(team, user) {
+			// Uncomment when ready to integrate with backend
 			// this.axios.post(`teacher/teams/${team.id}/captain/${user.id}`).then(resp => {
 			// 	if (confirm('Потрібно перезавантажити дані.')) {
 			// 		location.reload();
 			// 	}
 			// });
 		},
+
 		isCaptain(team, user) {
 			return user?.pivot.gist === 'captain';
 		},
 
+		// Initiate dragging; add a flag for both desktop & mobile
 		onDragStart(event, user) {
-			event.dataTransfer.dropEffect = 'move'
-			event.dataTransfer.effectAllowed = 'move'
-			event.dataTransfer.setData('userID', user.id.toString())
+			this.draggedUserID = user.id;
+			if (event.dataTransfer) {
+				event.dataTransfer.dropEffect = 'move';
+				event.dataTransfer.effectAllowed = 'move';
+			}
 		},
 
+		// Handle drop logic for both desktop and mobile
 		onDrop(event, teamID, index) {
-			const userID = parseInt(event.dataTransfer.getData('userID'));
+			const userID = this.draggedUserID
+			if (!userID) return;
 
 			let targetUser;
 
-			this.teamsWithUsers = this.teamsWithUsers.map((team, i) => {
-				let newTeam = {
-					...team,
-					users: team.users.filter((user) => {
-						// don`t allow swap capitans!
-						if (user.id === userID && !user.pivot.gist && user.pivot.team_id !== teamID) {
-							user.pivot.team_id = teamID;
-							targetUser = user; // Store the user to add later
-							return false; // Remove the user from the current team
-						}
-						return true; // Keep other users
-					})
-				};
-				// newTeam.users[0].pivot.gist = 'captain';
-				return newTeam
+			this.teamsWithUsers = this.teamsWithUsers.map(team => {
+				const newUsers = team.users.filter(user => {
+					if (user.id === userID && !user.pivot.gist && user.pivot.team_id !== teamID) {
+						user.pivot.team_id = teamID;
+						targetUser = user; // Store user for later
+						return false; // Exclude the dragged user from current team
+					}
+					return true;
+				});
+				return { ...team, users: newUsers };
 			});
 
-			// Update the new team's user list
-			if (targetUser)
-				this.teamsWithUsers[index].users.push(targetUser);
+			if (targetUser) this.teamsWithUsers[index].users.push(targetUser);
 
-			console.log({ teamID, userID });
-		}
-
-
+			this.draggedUserID = null; // Reset dragged user ID
+		},
 	},
-}
+};
+
 
 </script>
 
@@ -114,8 +113,8 @@ export default {
 					<hr />
 
 					<div class="participants">
-						<div style="color: var(--primary-text)" v-for="(user, key) in team.users" :key="key"
-							@dragstart="onDragStart($event, user)" :draggable="!user.pivot.gist" >
+						<div v-for="(user, key) in team.users" :key="user.id" @dragstart="onDragStart($event, user)"
+							:draggable="!user.pivot.gist">
 							<input type="radio" :name="`captain_${team.id}`" class="captain"
 								@change="onChangeCaptain(team, user)" :checked="isCaptain(team, user)"
 								:title="isCaptain(team, user) ? 'Капітан доманди' : 'Назначити капітаном команди'" />

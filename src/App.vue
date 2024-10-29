@@ -43,12 +43,13 @@ export default {
 			if (event.dataTransfer) {
 				event.dataTransfer.dropEffect = 'move';
 				event.dataTransfer.effectAllowed = 'move';
+				event.dataTransfer.setData('userID', user.id.toString());
 			}
 		},
 
 		// Handle drop logic for both desktop and mobile
 		onDrop(event, teamID, index) {
-			const userID = this.draggedUserID
+			const userID = this.draggedUserID || parseInt(event.dataTransfer?.getData('userID'));
 			if (!userID) return;
 
 			let targetUser;
